@@ -83,4 +83,10 @@ public class ProductService {
         storage.products.put(id, updated);
         return updated;
     }
+
+    public void delete(Long id) {
+        findById(id); // 404 если продукта нет
+        itemService.deleteItemsByProductId(id); // каскадное удаление единиц
+        storage.products.remove(id);
+    }
 }
