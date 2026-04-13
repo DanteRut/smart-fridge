@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>edu.rutmiit.smartfridge</groupId>
+    <groupId>ru.smartfridge</groupId>
     <artifactId>smart-fridge-service</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>smart-fridge-service</name>
@@ -22,7 +22,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>edu.rutmiit.smartfridge</groupId>
+            <groupId>ru.smartfridge</groupId>
             <artifactId>smart-fridge-api-contract</artifactId>
             <version>${project.version}</version>
         </dependency>
