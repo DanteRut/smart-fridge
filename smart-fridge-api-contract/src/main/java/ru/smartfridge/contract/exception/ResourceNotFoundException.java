@@ -1,4 +1,4 @@
-package ru.smartfridge.contract.exceptions;
+package ru.smartfridge.contract.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
     public ResourceNotFoundException(String resourceName, Object resourceId) {
