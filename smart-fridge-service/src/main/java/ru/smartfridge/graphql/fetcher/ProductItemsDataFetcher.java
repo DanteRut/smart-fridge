@@ -1,11 +1,8 @@
 package ru.smartfridge.graphql.fetcher;
 
 import com.netflix.graphql.dgs.*;
-import ru.smartfridge.contract.dto.FridgeItemResponse;
-import ru.smartfridge.contract.dto.PagedResponse;
-import ru.smartfridge.contract.dto.ProductResponse;
-import ru.smartfridge.graphql.types.FridgeItemConnectionGql;
-import ru.smartfridge.graphql.types.PageInfoGql;
+import ru.smartfridge.contract.dto.*;
+import ru.smartfridge.graphql.types.*;
 import ru.smartfridge.service.FridgeItemService;
 
 @DgsComponent
@@ -21,7 +18,6 @@ public class ProductItemsDataFetcher {
     public FridgeItemConnectionGql items(DgsDataFetchingEnvironment dfe,
                                          @InputArgument Integer page,
                                          @InputArgument Integer size) {
-
         ProductResponse product = dfe.getSource();
 
         int pageNum = page != null ? page : 0;
