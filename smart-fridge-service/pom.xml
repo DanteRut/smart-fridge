@@ -18,7 +18,21 @@
 
     <properties>
         <java.version>21</java.version>
+        <dgs.platform.version>9.1.2</dgs.platform.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--  Netflix DGS — BOM для управления версиями всех GraphQL-зависимостей  -->
+            <dependency>
+                <groupId>com.netflix.graphql.dgs</groupId>
+                <artifactId>graphql-dgs-platform-dependencies</artifactId>
+                <version>11.1.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -60,7 +74,30 @@
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-commons</artifactId>
         </dependency>
+
+        <!--  Netflix DGS — стартер для GraphQL на базе Spring for GraphQL  -->
+        <dependency>
+            <groupId>com.netflix.graphql.dgs</groupId>
+            <artifactId>graphql-dgs-spring-graphql-starter</artifactId>
+        </dependency>
+        <!--  Расширенные скаляры GraphQL (DateTime, Date и другие)  -->
+        <dependency>
+            <groupId>com.netflix.graphql.dgs</groupId>
+            <artifactId>graphql-dgs-extended-scalars</artifactId>
+        </dependency>
     </dependencies>
+
+<!--    <dependencyManagement>-->
+<!--        <dependencies>-->
+<!--            <dependency>-->
+<!--                <groupId>com.netflix.graphql.dgs</groupId>-->
+<!--                <artifactId>graphql-dgs-platform-dependencies</artifactId>-->
+<!--                <version>${dgs.platform.version}</version>-->
+<!--                <type>pom</type>-->
+<!--                <scope>import</scope>-->
+<!--            </dependency>-->
+<!--        </dependencies>-->
+<!--    </dependencyManagement>-->
 
     <build>
         <plugins>
