@@ -1,0 +1,94 @@
+scalar Date
+scalar DateTime
+
+type Query {
+  product(id: ID!): Product
+  products(page: Int = 0, size: Int = 20): ProductConnection!
+
+  item(id: ID!): FridgeItem
+  items(productId: ID, page: Int = 0, size: Int = 20): FridgeItemConnection!
+}
+
+type Mutation {
+  createProduct(input: CreateProductInput!): Product!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  patchProduct(id: ID!, input: PatchProductInput!): Product!
+  deleteProduct(id: ID!): Boolean!
+
+  createItem(input: CreateItemInput!): FridgeItem!
+  updateItem(id: ID!, input: UpdateItemInput!): FridgeItem!
+  patchItem(id: ID!, input: PatchItemInput!): FridgeItem!
+  deleteItem(id: ID!): Boolean!
+}
+
+type Product {
+  id: ID!
+  name: String!
+  category: String
+  itemsCount: Int
+
+  items(page: Int = 0, size: Int = 20): FridgeItemConnection!
+}
+
+type FridgeItem {
+  id: ID!
+  product: Product!
+  quantity: Int!
+  unit: String!
+  expiresAt: Date!
+  createdAt: DateTime!
+  updatedAt: DateTime
+}
+
+type PageInfo {
+  pageNumber: Int!
+  pageSize: Int!
+  totalPages: Int!
+  last: Boolean!
+}
+
+type ProductConnection {
+  content: [Product!]!
+  pageInfo: PageInfo!
+  totalElements: Int!
+}
+
+type FridgeItemConnection {
+  content: [FridgeItem!]!
+  pageInfo: PageInfo!
+  totalElements: Int!
+}
+
+input CreateProductInput {
+  name: String!
+  category: String
+}
+
+input UpdateProductInput {
+  name: String!
+  category: String
+}
+
+input PatchProductInput {
+  name: String
+  category: String
+}
+
+input CreateItemInput {
+  productId: ID!
+  quantity: Int!
+  unit: String!
+  expiresAt: Date!
+}
+
+input UpdateItemInput {
+  quantity: Int!
+  unit: String!
+  expiresAt: Date!
+}
+
+input PatchItemInput {
+  quantity: Int
+  unit: String
+  expiresAt: Date
+}
