@@ -14,5 +14,6 @@
     <modules>
         <module>smart-fridge-api-contract</module>
         <module>smart-fridge-service</module>
+        <module>smart-fridge-events-contract</module>
     </modules>
 </project>
