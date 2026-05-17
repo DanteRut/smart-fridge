@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import ru.smartfridge.contract.dto.*;
 import ru.smartfridge.contract.exception.ResourceNotFoundException;
+import ru.smartfridge.event.FridgeItemEventPublisher;
 import ru.smartfridge.storage.InMemoryStorage;
 
 import java.time.LocalDateTime;
@@ -16,10 +17,12 @@ public class FridgeItemService {
 
     private final InMemoryStorage storage;
     private final ProductService productService;
+    private final FridgeItemEventPublisher eventPublisher;
 
-    public FridgeItemService(InMemoryStorage storage, @Lazy ProductService productService) {
+    public FridgeItemService(InMemoryStorage storage, @Lazy ProductService productService, FridgeItemEventPublisher eventPublisher) {
         this.storage = storage;
         this.productService = productService;
+        this.eventPublisher = eventPublisher;
     }
 
     public FridgeItemResponse findById(Long id) {
@@ -69,6 +72,7 @@ public class FridgeItemService {
                 .build();
 
         storage.items.put(id, created);
+        eventPublisher.publishCreated(created);
         return created;
     }
 
@@ -86,6 +90,7 @@ public class FridgeItemService {
                 .build();
 
         storage.items.put(id, updated);
+        eventPublisher.publishUpdated(updated);
         return updated;
     }
 
@@ -103,12 +108,14 @@ public class FridgeItemService {
                 .build();
 
         storage.items.put(id, updated);
+        eventPublisher.publishUpdated(updated);
         return updated;
     }
 
     public void delete(Long id) {
-        findById(id);
+        FridgeItemResponse item = findById(id);
         storage.items.remove(id);
+        eventPublisher.publishDeleted(id, item.getProduct().getId());
     }
 
     public void deleteItemsByProductId(Long productId) {
