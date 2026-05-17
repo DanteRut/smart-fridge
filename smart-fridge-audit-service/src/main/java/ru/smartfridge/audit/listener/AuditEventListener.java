@@ -13,7 +13,7 @@ public class AuditEventListener {
     private static final Logger log = LoggerFactory.getLogger(AuditEventListener.class);
 
     @RabbitListener(queues = AuditRabbitConfig.AUDIT_QUEUE)
-    public void onEvent(EventEnvelope<Object> envelope) {
+    public void onEvent(EventEnvelope envelope) {
         log.info("AUDIT received: routingKey={}, eventId={}, payload={}",
                 envelope.metadata().routingKey(),
                 envelope.metadata().eventId(),
