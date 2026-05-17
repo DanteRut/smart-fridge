@@ -21,6 +21,18 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>ru.smartfridge</groupId>
+            <artifactId>smart-fridge-events-contract</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Контракт: Spring MVC аннотации на интерфейсах -->
         <dependency>
             <groupId>org.springframework</groupId>

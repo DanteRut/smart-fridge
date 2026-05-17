@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import ru.smartfridge.contract.dto.*;
 import ru.smartfridge.contract.exception.ResourceNotFoundException;
+import ru.smartfridge.event.ProductEventPublisher;
 import ru.smartfridge.storage.InMemoryStorage;
 
 import java.util.Comparator;
@@ -15,10 +16,12 @@ public class ProductService {
 
     private final InMemoryStorage storage;
     private final FridgeItemService itemService;
+    private final ProductEventPublisher eventPublisher;
 
-    public ProductService(InMemoryStorage storage, @Lazy FridgeItemService itemService) {
+    public ProductService(InMemoryStorage storage, @Lazy FridgeItemService itemService, ProductEventPublisher eventPublisher) {
         this.storage = storage;
         this.itemService = itemService;
+        this.eventPublisher = eventPublisher;
     }
 
     public PagedResponse<ProductResponse> findAll(int page, int size) {
@@ -53,6 +56,7 @@ public class ProductService {
                 .build();
 
         storage.products.put(id, created);
+        eventPublisher.publishCreated(created);
         return created;
     }
 
@@ -67,6 +71,7 @@ public class ProductService {
                 .build();
 
         storage.products.put(id, updated);
+        eventPublisher.publishUpdated(updated);
         return updated;
     }
 
@@ -81,12 +86,14 @@ public class ProductService {
                 .build();
 
         storage.products.put(id, updated);
+        eventPublisher.publishUpdated(updated);
         return updated;
     }
 
     public void delete(Long id) {
-        findById(id); // 404 если продукта нет
+        ProductResponse item = findById(id); // 404 если продукта нет
         itemService.deleteItemsByProductId(id); // каскадное удаление единиц
         storage.products.remove(id);
+        eventPublisher.publishDeleted(item);
     }
 }
