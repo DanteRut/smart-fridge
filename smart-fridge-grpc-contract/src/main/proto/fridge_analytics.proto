@@ -1,0 +1,27 @@
+syntax = "proto3"
+
+option java_package = "ru.smartfridge.grpc";
+option = java_multiple_files = true;
+
+package fridgeanalytics;
+
+// Unary RPC - один запрос = один ответ
+service FridgeItemAnalytics {
+    rpc AnalyzeItem (AnalyzeItemRequest returns (ItemAnalysisResponse);
+}
+
+message AnalyzeItemRequest {
+    int64 item_id = 1;
+    string product_name = 2;
+    string category = 3;
+    int32 quantity = 4;
+    int32 days_until_expiration = 5;
+}
+
+message ItemAnalysisResponse {
+    int64 item_id = 1;
+    string storage_zone = 2;         // "Door", "Back", "Freezer"
+    string health-risk_level = 3;    // LOW, MEDIUM, HIGH
+    double freshness_score = 4;      // 0.0 - 10.0
+    string consumption_priority = 5; // IMMEDIATE, SOON, NORMAL
+}

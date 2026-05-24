@@ -16,5 +16,6 @@
         <module>smart-fridge-service</module>
         <module>smart-fridge-events-contract</module>
         <module>smart-fridge-audit-service</module>
+        <module>smart-fridge-grpc-contract</module>
     </modules>
 </project>
