@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: smart-fridge-enrichment-client
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 2000
+          max-attempts: 3
+          multiplier: 2.0
+
+server:
+  port: 8082
+
+grpc:
+  client:
+    analytics-server:
+      host: localhost
+      port: 9090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -18,5 +18,6 @@
         <module>smart-fridge-audit-service</module>
         <module>smart-fridge-grpc-contract</module>
         <module>smart-fridge-analytics-server</module>
+        <module>smart-fridge-enrichment-client</module>
     </modules>
 </project>
