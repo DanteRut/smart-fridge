@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Fridge — Центр уведомлений</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #222635;
+            --border: #2e3347;
+            --text-primary: #e4e7ef;
+            --text-secondary: #8b92a8;
+            --text-muted: #5c6380;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --accent-blue: #5b8def;
+            --accent-purple: #a78bfa;
+            --radius: 12px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-logo { font-size: 28px; }
+        .header-title { font-size: 20px; font-weight: 700; }
+        .header-subtitle { font-size: 12px; color: var(--text-muted); }
+        .status {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 13px; font-weight: 500;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+        }
+        .status.connected { border-color: rgba(52, 211, 153, 0.3); }
+        .status.connected .status-dot {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse-green 2s infinite;
+        }
+        .status.disconnected { border-color: rgba(248, 113, 113, 0.3); }
+        .status.disconnected .status-dot { background: var(--accent-red); }
+        .status.reconnecting { border-color: rgba(251, 191, 36, 0.3); }
+        .status.reconnecting .status-dot {
+            background: var(--accent-amber);
+            animation: pulse-amber 1s infinite;
+        }
+        @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes pulse-amber { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.3); } }
+        .badge {
+            background: var(--accent-blue); color: #fff;
+            font-size: 12px; font-weight: 700;
+            min-width: 24px; height: 24px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 8px;
+        }
+        .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+        .empty-state {
+            text-align: center; padding: 80px 20px; color: var(--text-muted);
+        }
+        .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+        .notification {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 10px;
+            display: flex; gap: 14px;
+            animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .notification::before {
+            content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        }
+        .notification.level-success::before { background: var(--accent-green); }
+        .notification.level-warning::before { background: var(--accent-amber); }
+        .notification.level-info::before { background: var(--accent-blue); }
+        .notification.is-new {
+            animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1), glow 1.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes glow {
+            0% { box-shadow: 0 0 20px rgba(91, 141, 239, 0.3); }
+            100% { box-shadow: none; }
+        }
+        .notification-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-shrink: 0;
+        }
+        .icon-plus { background: rgba(52, 211, 153, 0.12); }
+        .icon-trash { background: rgba(248, 113, 113, 0.12); }
+        .icon-analytics { background: rgba(167, 139, 250, 0.12); }
+        .icon-bell { background: rgba(139, 146, 168, 0.12); }
+        .notification-body { flex: 1; min-width: 0; }
+        .notification-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+        .notification-desc { font-size: 13px; color: var(--text-secondary); }
+        .notification-meta {
+            display: flex; gap: 12px; margin-top: 8px;
+            font-size: 11px; color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="header-left">
+        <div class="header-logo">🔔</div>
+        <div>
+            <div class="header-title">Smart Fridge — Центр уведомлений</div>
+            <div class="header-subtitle">WebSocket · RabbitMQ · Real-time</div>
+        </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="badge" id="badge">0</div>
+        <div class="status disconnected" id="status">
+            <div class="status-dot"></div>
+            <span id="status-text">Отключено</span>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <div id="empty-state" class="empty-state">
+        <div class="empty-state-icon">🔕</div>
+        <div>Нет уведомлений</div>
+        <div style="font-size: 13px; margin-top: 8px;">
+            Добавьте продукт в холодильник через REST API, и уведомления появятся здесь в реальном времени.
+        </div>
+    </div>
+    <div id="notifications"></div>
+</main>
+
+<script>
+    const WS_URL = `ws://${window.location.hostname}:8084/ws/notifications`;
+    const RECONNECT_BASE_MS = 1000;
+    const RECONNECT_MAX_MS = 30000;
+
+    let ws = null;
+    let reconnectAttempt = 0;
+    let reconnectTimer = null;
+    let notificationCount = 0;
+
+    const ICONS = { plus: "✅", trash: "🗑️", analytics: "🔬", bell: "🔔" };
+
+    const $status = document.getElementById("status");
+    const $statusText = document.getElementById("status-text");
+    const $badge = document.getElementById("badge");
+    const $list = document.getElementById("notifications");
+    const $empty = document.getElementById("empty-state");
+
+    function connect() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+
+        setStatus("reconnecting", "Подключение...");
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+            reconnectAttempt = 0;
+            setStatus("connected", "Подключено");
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === "NOTIFICATION") addNotification(data);
+            } catch (e) {
+                console.error("Ошибка парсинга:", e);
+            }
+        };
+
+        ws.onclose = () => {
+            setStatus("disconnected", "Отключено");
+            scheduleReconnect();
+        };
+
+        ws.onerror = () => console.error("WebSocket error");
+    }
+
+    function scheduleReconnect() {
+        const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt), RECONNECT_MAX_MS);
+        reconnectAttempt++;
+        setStatus("reconnecting", `Переподключение через ${(delay / 1000).toFixed(0)}с...`);
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, delay);
+    }
+
+    function setStatus(state, text) {
+        $status.className = `status ${state}`;
+        $statusText.textContent = text;
+    }
+
+    function addNotification(data) {
+        $empty.style.display = "none";
+        notificationCount++;
+        $badge.textContent = notificationCount;
+
+        const card = document.createElement("div");
+        card.className = `notification level-${data.level || "info"} is-new`;
+        const iconEmoji = ICONS[data.icon] || "🔔";
+        const time = new Date(data.receivedAt).toLocaleTimeString("ru-RU");
+
+        card.innerHTML = `
+            <div class="notification-icon icon-${data.icon || "bell"}">${iconEmoji}</div>
+            <div class="notification-body">
+                <div class="notification-title">${escapeHtml(data.title)}</div>
+                <div class="notification-desc">${escapeHtml(data.description)}</div>
+                <div class="notification-meta">
+                    <span>${time}</span>
+                    <span>${escapeHtml(data.source)}</span>
+                    <span>${escapeHtml(data.eventType)}</span>
+                </div>
+            </div>
+        `;
+
+        $list.prepend(card);
+        setTimeout(() => card.classList.remove("is-new"), 1500);
+        document.title = `(${notificationCount}) Smart Fridge`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return "";
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    connect();
+</script>
+</body>
+</html>
