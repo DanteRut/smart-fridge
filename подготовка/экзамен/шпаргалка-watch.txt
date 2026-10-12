@@ -1,0 +1,134 @@
+СОП — ШПАРГАЛКА (Watch)
+
+0. СКЕЛЕТ ОТВЕТА
+Термин → механика → компромисс → «у меня в проекте»
+
+ГОТОВЫЕ ФРАЗЫ
+- Сложность переносится, не исчезает
+- Опасен тихий сбой, не громкий
+- Аддитивность → депрекация → удаление
+- Ровно-once нет → идемпотентность
+- Метрика мерит форму, не стоимость
+
+────────────
+1. REST
+- 7 принципов: Client-Server, Stateless, Cacheable, Uniform Interface, Layered, Code on Demand, Null Style
+- RMM: 0 всё POST → 1 URL ресурсов → 2 глаголы+коды → 3 _links
+- Идемпотентны GET/PUT/DELETE; POST нет; PATCH не гарантирована
+- 401 «кто ты?» / 403 «нельзя» / 429 → Retry-After / 502 ставит шлюз
+- Код = инструкция для ретраев и мониторинга
+
+2. ОШИБКИ ЗА ШЛЮЗОМ
+- Решение по статусу = зацеплен за транспорт (меняют прокси/шлюзы)
+- Решение: RFC 7807 в теле: status,type,title,detail,instance
+- status дублируется В ТЕЛЕ → живёт за шлюзом
+- GraphQL: всегда 200 + errors
+- Цена: кэш (no-store), алерты по телу
+
+3. ПОЛЕ ПРОПАЛО ИЗ JSON
+Цепь: Entity → DTO → Jackson
+1) нет поля в DTO 2) NON_NULL + null 3) naming strategy 4) нет геттера/@JsonIgnore 5) @JsonView
+Тихо = это конфигурация, не ошибка
+
+4. PUT / PATCH
+- PUT = замена целиком, идемпотентен (f(f(s))=X)
+- PATCH = дельта, null = «не трогать»
+- Ловушка: JSON «нет поля» ≠ null, в Java одинаково
+- 3 решения: RFC 7386 Merge (нет=не менять, null=очистить) / RFC 6902 Patch (массив op) / своё (reset:[])
+- Merge: клиенту +, серверу − (JsonNullable)
+- В GraphQL absent ≠ null из коробки
+
+5. ПЕРЕИМЕНОВАНИЕ ПОЛЯ
+- Сервер нет, клиент ДА и молча (field→input по строке)
+- 3 места: DTO/OpenAPI/ошибки · клиент · тесты
+- Шаги: 1) +code ошибки, +новое поле алиасом 2) клиенты в своём темпе 3) удалить старое
+
+6. ЦЕНА HATEOAS
+- Переносит сложность на сервер
+- rel = контракт · матрица состояние×действие · абсолютные ссылки (X-Forwarded) · забыл ссылку = нет действия
+- linkTo(methodOn) = прокси читает аннотации
+- Хардкод падает на смене URL, HATEOAS — на кривой ссылке
+
+7. HATEOAS + UI
+- UI статичен, ссылки в рантайме; «нет ссылки» = скрытое состояние
+- Решения: 1) allowed/reason у ссылки 2) реестр rel → disabled 3) BFF → флаги canX
+- Сервер = «можно ли», клиент = «как показать»
+
+8. КОНТРАКТ-МОДУЛЬ
+- «Сломал контракт → не собирается» (ошибка на компиляции)
+- dto/endpoints/exception; Reactor: контракт раньше
+- PagedResponse = record без Spring (клиентам лишнее не тащим)
+- Цена: зацеплен за Spring MVC
+
+9. GRAPHQL
+- query параллельно · mutation последовательно (целостность) · subscription push (WS/SSE)
+- variables: query = константа → кэш parse/validate (prepared stmt) · persisted queries (хэш) · без инъекций
+- Защита: depth + complexity(веса) + persisted + интроспекция off
+
+10. DEPTH
+- Depth мерит вертикаль, нагрузка = данные
+- Уложить при depth 5: first:100000 · дорогой резолвер · алиасы a:b:c: · introspection
+- Лечение: cost-веса полей, лимиты пагинации, таймауты
+
+11. N+1
+- Резолвер на каждое поле каждого объекта, без батчей
+- 7 = 1+1+1+N
+- REST = 2: JOIN спроектирован
+- DataLoader: ключи в очередь → один WHERE IN + кэш на запрос
+- 1+N → 1+1
+
+12. BFF / АГРЕГАТОР
+- 1 запрос, 3 вызова параллельно, max(t) вместо суммы
+- Уязвимости: точка отказа · каскад (таймауты, частичный ответ) · N+1 переезжает · дубль авторизации · владение
+- Спецэндпоинт = антипаттерн (домен срастается с UI)
+
+13. REST + GraphQL ВМЕСТЕ
+- Расходятся: ошибки (2 обработчика) · кэш · защита · релиз
+- Сценарий 1: нагрузка GraphQL валит REST (один пул)
+- Сценарий 2: скорости (фронт неделя vs партнёры квартал)
+- Правильно: разные модули, общие сервисы
+
+14. PROTOBUF
+- Провод: пары (номер, wire type), имён нет
+- 0 varint(int,bool,enum) · 2 len-delim(string,msg) · 1×64 · 5×32
+- Новое поле: старый ПРОПУСКАЕТ (сохраняет); назад = дефолты 0/""/false/enum0
+- 0 ≠ «не задано» → optional (hasField)
+- Ломает: смена типа (другой wire = падение; тот же = тихий мусор) · singular↔repeated · номер без reserved
+- Не защищает: гарантия структурная, смысла не знает → reserved, CI buf breaking
+
+15. RABBITMQ
+- producer → exchange → binding → queue → consumer (producer не знает очередей)
+- direct = ключ · fanout = всем копии (очередь отдаёт одному!) · topic = паттерны
+- * = одно слово, # = ноль и больше
+- product.created: product.#✓ *.created✓ product.created✗
+
+16. ГАРАНТИИ ДОСТАВКИ
+- 3 звена: publisher confirms / durable+persistent / manual ack
+- auto-ack: упал после получения = потеря
+- basicAck · basicNack(requeue=false → DLQ)
+- DLQ: не блокирует очередь, разбор руками, рост = алерт; тихий → громкий
+
+17. DUAL WRITE → OUTBOX
+- Общей транзакции нет (2PC нет)
+- Опаснее ПОТЕРЯ (тихая, навсегда) > фантом (громкий) [деньги наружу — наоборот]
+- Outbox: 1 ACID-транзакция: сущность + outbox → релизер (поллер/CDC) + confirms → PUBLISHED
+- Цена: at-least-once → дедуп по eventId
+- afterCommit хуже: смерть после коммита = потеря
+
+18. SEALED
+- vs enum: у вариантов СВОИ payload · exhaustive switch (эволюция на сборке) · permits закрыт
+- default гасит проверку
+- Компиляция ≠ рантайм: новый тип + старый consumer = MatchException (громко) или тишина (default)
+- Правильно: default → warn + метрика + DLQ
+- Consumer'ов деплоить раньше producer'ов
+
+19. МОЙ ПРОЕКТ
+- 4 модуля: api-contract / service / events-contract / audit-service
+- REST(HATEOAS+OpenAPI) + GraphQL DGS в одном приложении
+- GlobalExceptionHandler(404/400/500) vs GraphQLExceptionHandler(200+TypedGraphQLError)
+- EventEnvelope{eventId,occurredAt,source,routingKey}; ключи product.*/item.*
+- audit: topic smartfridge.events, binding #, durable, авто-ack (нет DLQ — точка роста)
+- ProductItemsDataFetcher = живой N+1
+- depth 20 / complexity 200, вес поля = 1
+- @Lazy против цикла Product↔ItemService; storage = ConcurrentHashMap
+- ProductEventPublisher.send() с log.error = живой dual write сбой 1
