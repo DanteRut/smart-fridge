@@ -46,7 +46,7 @@ input vs type в схеме?	Аргументы мутаций — только 
 Формат провода protobuf?	Пары (номер поля, wire type); имён полей в байтах нет. Поэтому переименование безопасно, ломают номера и wire type	grpc proto
 Wire types protobuf?	0 varint (int32/int64/bool/enum), 1 fixed 64-bit, 2 length-delimited (string/bytes/message/packed repeated), 5 fixed 32-bit	grpc proto
 Старый клиент читает сообщение с новым полем?	Не знает номер → смотрит wire type → пропускает блок целиком, остальное парсит как раньше. Совместимо	grpc proto
-Новый клиент читает старые данные?	Поля в байтах нет → дефолт proto3: 0 / "" / false / enum[0]. Различить «не задано» → optional + hasField()	grpc proto
+Новый клиент читает старые данные?	Поля в байтах нет → дефолт proto3: 0 / '' / false / enum[0]. Различить «не задано» → optional + hasField()	grpc proto
 Почему переименование поля в .proto безопасно?	Имена по сети не ездят, только номера. В JSON — наоборот: имена и есть контракт (отсюда хрупкость FieldError.field)	grpc proto
 Что ломает совместимость proto (3 вещи)?	1) смена типа с другим wire type = падение парсера 2) смена в пределах того же wire (int32→int64→bool) = тихий мусор 3) переиспользование номера без reserved	grpc proto
 Зачем reserved в proto?	Запрещает переиспользовать удалённые номер и имя — компилятор не даст; плюс buf breaking в CI. Протокол защищает структуру, не смысл	grpc proto
@@ -68,7 +68,7 @@ enum vs sealed — мнемоника?	enum — закрытый список З
 Dual write: потеря vs фантом?	Потеря (данных нет, события нет) — тихая, для аудита опаснее. Фантом (событие есть, данных нет) — громкий. Для «денег наружу» наоборот: фантом хуже	events outbox
 Шаги outbox-паттерна?	В одной ACID-транзакции: бизнес-данные + INSERT в outbox → отдельный релизер читает и публикует с confirms → помечает PUBLISHED. Плата: at-least-once → дедуп	events outbox
 Почему afterCommit-публикация хуже outbox?	Смерть процесса между commit и publish = потеря навсегда; outbox лежит в БД и переживает любое падение	events outbox
-Что стоит в аудите у нас и чего нет?	Exchange smartfridge.events (topic, durable), binding "#" (всё), авто-ack. НЕТ: confirms, manual ack, DLQ, дедупа — карта улучшений	rabbitmq project
+Что стоит в аудите у нас и чего нет?	Exchange smartfridge.events (topic, durable), binding '#' (всё), авто-ack. НЕТ: confirms, manual ack, DLQ, дедупа — карта улучшений	rabbitmq project
 4 модуля проекта?	smart-fridge-api-contract (REST-контракт) · smart-fridge-service (8080, REST+GraphQL DGS) · smart-fridge-events-contract (события) · smart-fridge-audit-service (8081)	project
 Коды GlobalExceptionHandler?	404 resource-not-found · 400 validation-error + fieldErrors · 500 internal-error; BASE = https://api.example.com/problems/	errors project
 События проекта (payload)?	ProductEvent permits Created(id,name,category), Updated(id,name,category), Deleted(id,name); FridgeItemEvent аналогично + quantity/unit/expiresAt; Deleted — минимальный payload	project sealed
