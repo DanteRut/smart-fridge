@@ -1,77 +1,77 @@
-Перечислите 7 принципов REST	Client-Server, Stateless, Cacheable, Uniform Interface, Layered System, Code on Demand, Null Style • (последний — необязательный, «стиль по умолчанию»)	rest
-Что значит Stateless в REST?	Сервер не хранит состояние сессии: каждый запрос самодостаточен (токен едет в запросе). Следствие — горизонтальное масштабирование без sticky-сессий	rest
-Что значит Uniform Interface?	Единый контракт независимо от клиента: ресурсы (URL), методы-глаголы (HTTP), представления (JSON), HATEOAS (ссылки)	rest
-Какие методы идемпотентны?	GET, PUT, DELETE, HEAD — да; POST — нет; PATCH — не гарантирована (зависит от реализации)	rest
-Что такое идемпотентность?	Повторный вызов даёт тот же результат, что и однократный: f(f(s)) = f(s). Важно для безопасных ретраев	rest
-Уровни зрелости Ричардсона (RMM)?	L0 один URL, всё POST, ошибки в теле → L1 отдельные URL ресурсов → L2 + методы и HTTP-коды → L3 + HATEOAS (_links)	rest rmm
-Что именно даёт L2 (методы + коды)?	Заработало: кэширование GET, мониторинг по кодам, безопасные ретраи идемпотентных, понимание посредников	rest rmm
-Что добавляет L3?	_links: клиент находит действия из ответа; сервер свободно двигает URL (клиент не хардкодит)	rest rmm hateoas
-401 vs 403?	401 — «кто ты?», не аутентифицирован (+ заголовок WWW-Authenticate, можно повторить после логина). 403 — «ты известен, но прав нет», повторять бессмысленно	rest codes
-400 vs 422?	400 — сломан синтаксис/структура (кривой JSON, пустое обязательное). 422 — синтаксис ок, но предметные правила не прошли (контрольная сумма ISBN)	rest codes
-500 vs 502 vs 503?	500 — упал сам сервис. 502 — посредник получил плохой/никакой ответ от нижестоящего. 503 — временно недоступен (+ Retry-After)	rest codes
-Кто ставит 502?	Посредник (шлюз, балансировщик) — сам сервис себе 502 не отдаёт	rest codes
-Поля RFC 7807 (Problem Details)?	type (URI типа), title, status, detail, instance (URI запроса); Content-Type: application/problem+json	rest errors
-Зачем в RFC 7807 status дублируется в теле?	Статус могут переписать посредники (шлюз/балансировщик) — тело доезжает как есть; клиент решает по телу	rest errors
-Семантика RFC 7386 (Merge Patch)?	null = очистить поле; поле отсутствует = не менять. Договор на уровне протокола	rest patch
-Семантика RFC 6902 (JSON Patch)?	Тело — массив операций [{op: add/remove/replace, path, value}]; Content-Type: application/json-patch+json. Шлём не данные, а команды правок	rest patch
-Три состояния значения поля в JSON?	1) есть значение 2) null 3) поле отсутствует. В Java-объекте состояний только два (значение/null) — отсюда вся боль PATCH	rest patch
-Семантика PUT?	Полное замещение состояния: не прислал поле — оно обнуляется. Поэтому идемпотентен	rest patch
-Договорённость нашего PatchProductRequest?	null = «не трогать». Следствие: обнулить поле через PATCH нельзя (осознанный компромисс)	rest patch project
-Три способа «стереть поле» через PATCH?	1) RFC 7386 Merge (null=очистить) 2) RFC 6902 (op:remove) 3) своё reset:[] или JsonNullable	rest patch
-Что такое JsonNullable?	Обёртка с тремя состояниями ABSENT/NULL/VALUE (org.openapitools.jackson.nullable); absent сериализуется «поля нет». Механизм реализации 7386 в Java	rest patch
-Цепочка Bean Validation?	Аннотации на DTO (@NotBlank...) → @Valid на параметре → проверка до входа в контроллер → MethodArgumentNotValidException → @ControllerAdvice → 400 + fieldErrors	validation
-Поля FieldError у нас?	field, rejectedValue, message. Чего не хватает: машиночитаемого code (REQUIRED/ISBN_INVALID) — готовый ответ «как улучшил бы»	validation errors
-Кто сломается при переименовании поля isbn→productIdentifier?	Сервер — нет, клиент — да и молча: маппит fieldErrors[].field на инпут формы строковым совпадением	validation
-Роль @ControllerAdvice в одном предложении?	Единая точка превращения исключений в HTTP-ответы: 404/400/500 одним форматом (у нас GlobalExceptionHandler, BASE .../problems/)	errors project
-HATEOAS одним предложением?	Представление ресурса содержит ссылки на возможные действия; клиент ходит по href, зная наизусть только один URL	rmm hateoas
-Что такое rel?	Имя отношения ссылки (self, items, update, delete) — часть публичного контракта: клиент различает действия по rel, идёт по href	hateoas
-Как работает linkTo(methodOn(ProductController.class).get(id))?	Метод НЕ вызывается: Spring HATEOAS строит прокси, читает аннотации маппинга (@GetMapping) и собирает URL. Переименование маппинга обновляет ссылки автоматически	hateoas
-4 пункта цены HATEOAS?	1) ссылки и rel — публичный контракт 2) матрица состояние×действие (тестировать) 3) ссылки абсолютны — X-Forwarded-Host/Proto 4) забыл ссылку = действия не существует	hateoas
-Конфликт HATEOAS с UI?	UI хочет показывать задизейбленную кнопку с причиной, а «нет ссылки» = действие не существует. Решения: allowed/reason в теле, реестр rel, BFF (canX-флаги)	hateoas
-Зачем контракт в отдельном Maven-модуле?	Один источник правды (DTO+эндпоинты+ошибки); javac ловит ломающие изменения у потребителей; OpenAPI из тех же аннотаций. Цена: тащит Spring-зависимости	contract
-Три операции GraphQL и порядок исполнения?	Query — параллельно; Mutation — верхнеуровневые поля строго последовательно (порядок в тексте); Subscription — пуш по WS/SSE	graphql
-Почему mutation исполняется последовательно?	Целостность: нельзя обновить то, что create ещё не создал; порядок задан порядком полей в тексте запроса	graphql
-3 причины variables (не хардкодить значения)?	1) текст запроса — константа → кэш parse/validate (аналог prepared statement) 2) persisted queries/APQ — шлём только хэш 3) типобезопасность: не тот тип отбракован до исполнения (+ нет инъекций)	graphql
-Что такое APQ?	Automatic Persisted Queries: первый запрос — текст+hash, дальше — только hash+variables: экономия трафика и фазы парсинга	graphql
-Depth vs Complexity?	Depth — вертикаль запроса (слеп к ширине и алиасам). Complexity — сумма весов полей, пагинация умножает цену ветки; ловит то, что depth пропустил	graphql security
-4 способа уложить сервер при depth=5?	1) first:100000 (ширина) 2) алиасы a:b:c:... ×200 3) одно поле с дорогим резолвером 4) introspection для разведки схемы	graphql security
-Формула N+1 в нашем проекте?	7 = 1 (список продуктов) + 1 (категории) + 4 (items для каждого); на 50 продуктах — 51 вызов (ProductItemsDataFetcher)	graphql project
-Как работает DataLoader?	Копит ключи всех запросивших полей за «тик» → один батч WHERE product_id IN (...) → карта id→значение + кэш на время запроса. 1+N → 1+1	graphql
-Формат ошибок GraphQL?	Всегда HTTP 200, ошибки в errors[] (message, path, extensions). В DGS — TypedGraphQLError/GraphQLExceptionHandler; не путать с @ControllerAdvice	graphql errors
-input vs type в схеме?	Аргументы мутаций — только input (PatchBookInput); типы-модели в аргументах использовать нельзя. В input absent ≠ null — обнуление штатно	graphql schema
-Что значит [Book!]!?	Список не null И элементы не null; ! читается «изнутри наружу»	graphql schema
-Лимиты GraphQL в проекте?	MaxQueryDepth(20), MaxQueryComplexity(200), вес поля по умолчанию 1 (дорогим полям вес повышаем вручную)	graphql security project
-Ключевые аннотации DGS?	@DgsComponent, @DgsQuery, @DgsMutation, @DgsSubscription, @DgsData(parentType, field), @InputArgument	graphql dgs
-Почему HTTP-кэш не работает для GraphQL?	Всё уходит POST на один URL /graphql — кэшировать нечего. Лечение: APQ + CDN; кэш per-field на клиенте (Apollo)	graphql
-Формат провода protobuf?	Пары (номер поля, wire type); имён полей в байтах нет. Поэтому переименование безопасно, ломают номера и wire type	grpc proto
-Wire types protobuf?	0 varint (int32/int64/bool/enum), 1 fixed 64-bit, 2 length-delimited (string/bytes/message/packed repeated), 5 fixed 32-bit	grpc proto
-Старый клиент читает сообщение с новым полем?	Не знает номер → смотрит wire type → пропускает блок целиком, остальное парсит как раньше. Совместимо	grpc proto
-Новый клиент читает старые данные?	Поля в байтах нет → дефолт proto3: 0 / '' / false / enum[0]. Различить «не задано» → optional + hasField()	grpc proto
-Почему переименование поля в .proto безопасно?	Имена по сети не ездят, только номера. В JSON — наоборот: имена и есть контракт (отсюда хрупкость FieldError.field)	grpc proto
-Что ломает совместимость proto (3 вещи)?	1) смена типа с другим wire type = падение парсера 2) смена в пределах того же wire (int32→int64→bool) = тихий мусор 3) переиспользование номера без reserved	grpc proto
-Зачем reserved в proto?	Запрещает переиспользовать удалённые номер и имя — компилятор не даст; плюс buf breaking в CI. Протокол защищает структуру, не смысл	grpc proto
-4 типа вызовов gRPC?	unary; server streaming (returns stream X); client streaming (принимает stream); bidi — stream с обеих сторон	grpc
-Транспорт и ошибки gRPC?	HTTP/2 + бинарный protobuf; мультиплексирование; коды ошибок: NOT_FOUND, INVALID_ARGUMENT, INTERNAL (вместо HTTP-статусов)	grpc
-Поток сообщения AMQP?	producer → exchange → binding → queue → consumer. Producer не знает очередей — только exchange и routing key	rabbitmq
-Типы exchange?	direct (точный ключ), fanout (копии всем привязанным очередям), topic (паттерны), headers	rabbitmq
-Topic-паттерны: какие бинды поймают product.created?	product.* ✓, product.# ✓, *.created ✓, # ✓; *.updated ✗; item.created ✗. * = ровно одно слово, # = ноль и больше	rabbitmq
-Поля EventEnvelope?	metadata {eventId, occurredAt, source, routingKey} + payload. eventId (UUID) — ключ дедупликации	events
-Синтаксис sealed-иерархии событий?	sealed interface ProductEvent permits ProductEvent.Created, ...; наследники — record со своим payload: record Created(Long id, String name) implements ProductEvent {}	events sealed
-Что даёт exhaustive switch?	Компилятор знает закрытый список permits и требует покрыть все ветки без default: забыл — ошибка компиляции (эволюция проверяется на сборке)	events sealed
-Старый consumer встречает новый вариант события?	Без default — MatchException (громко, видно в мониторинге); с default — тишина (хуже). Правило: default → warn + метрика + DLQ	events sealed
-enum vs sealed — мнемоника?	enum — закрытый список ЗНАЧЕНИЙ при одном наборе полей; sealed — закрытый список ТИПОВ, у каждого свой payload. Одинаковые данные → enum; разные → sealed	events sealed
-Правило деплоя consumer/producer?	Consumer'ов деплоить раньше producer'ов: старый consumer + новое событие = беда; новый consumer + старое событие = ок (обратная совместимость)	events sealed
-Три звена гарантированной доставки?	1) publisher confirms (брокер квитанцией подтвердил приём) 2) durable exchange/queue + persistent message (delivery mode 2, на диск) 3) manual ack (подтверждение после обработки)	events delivery
-Риск auto-ack?	Брокер вычеркнул сообщение при отправке; consumer упал на полпути → «доставлено», работы нет → тихая потеря	events delivery
-Что делает basicNack(requeue=false)?	Уводит сообщение в DLQ: очередь не блокируется, разбор руками; рост DLQ = алерт. Тихий сбой → громкий	events delivery
-Почему exactly-once невозможен сквозь сеть?	Подтверждение может потеряться ПОСЛЕ применения операции → повтор неизбежен. Стандарт: at-least-once + идемпотентность (дедуп по eventId)	events delivery
-Dual write: потеря vs фантом?	Потеря (данных нет, события нет) — тихая, для аудита опаснее. Фантом (событие есть, данных нет) — громкий. Для «денег наружу» наоборот: фантом хуже	events outbox
-Шаги outbox-паттерна?	В одной ACID-транзакции: бизнес-данные + INSERT в outbox → отдельный релизер читает и публикует с confirms → помечает PUBLISHED. Плата: at-least-once → дедуп	events outbox
-Почему afterCommit-публикация хуже outbox?	Смерть процесса между commit и publish = потеря навсегда; outbox лежит в БД и переживает любое падение	events outbox
-Что стоит в аудите у нас и чего нет?	Exchange smartfridge.events (topic, durable), binding '#' (всё), авто-ack. НЕТ: confirms, manual ack, DLQ, дедупа — карта улучшений	rabbitmq project
-4 модуля проекта?	smart-fridge-api-contract (REST-контракт) · smart-fridge-service (8080, REST+GraphQL DGS) · smart-fridge-events-contract (события) · smart-fridge-audit-service (8081)	project
-Коды GlobalExceptionHandler?	404 resource-not-found · 400 validation-error + fieldErrors · 500 internal-error; BASE = https://api.example.com/problems/	errors project
-События проекта (payload)?	ProductEvent permits Created(id,name,category), Updated(id,name,category), Deleted(id,name); FridgeItemEvent аналогично + quantity/unit/expiresAt; Deleted — минимальный payload	project sealed
-Как разорван цикл ProductService↔FridgeItemService?	@Lazy на одной из инъекций: прокси вместо реального бина до первого использования	project
-Живой dual write сбой в проекте?	ProductEventPublisher.send() в try/catch → log.error; демонстрация: docker stop rabbitmq → POST → 201, продукт создан, события нет, в логе строчка	project outbox
-Хранилище и стек проекта?	In-memory ConcurrentHashMap (честный компромисс); Spring Boot 4, Java 21 (sealed/exhaustive switch), DGS 11, порты 8080/8081	project
+Перечислите 7 принципов REST	Client-Server, Stateless, Cacheable, Uniform Interface, Layered System, Code on Demand, Null Style • (последний — необязательный, «стиль по умолчанию»)
+Что значит Stateless в REST?	Сервер не хранит состояние сессии: каждый запрос самодостаточен (токен едет в запросе). Следствие — горизонтальное масштабирование без sticky-сессий
+Что значит Uniform Interface?	Единый контракт независимо от клиента: ресурсы (URL), методы-глаголы (HTTP), представления (JSON), HATEOAS (ссылки)
+Какие методы идемпотентны?	GET, PUT, DELETE, HEAD — да; POST — нет; PATCH — не гарантирована (зависит от реализации)
+Что такое идемпотентность?	Повторный вызов даёт тот же результат, что и однократный: f(f(s)) = f(s). Важно для безопасных ретраев
+Уровни зрелости Ричардсона (RMM)?	L0 один URL, всё POST, ошибки в теле → L1 отдельные URL ресурсов → L2 + методы и HTTP-коды → L3 + HATEOAS (_links)
+Что именно даёт L2 (методы + коды)?	Заработало: кэширование GET, мониторинг по кодам, безопасные ретраи идемпотентных, понимание посредников
+Что добавляет L3?	_links: клиент находит действия из ответа; сервер свободно двигает URL (клиент не хардкодит)
+401 vs 403?	401 — «кто ты?», не аутентифицирован (+ заголовок WWW-Authenticate, можно повторить после логина). 403 — «ты известен, но прав нет», повторять бессмысленно
+400 vs 422?	400 — сломан синтаксис/структура (кривой JSON, пустое обязательное). 422 — синтаксис ок, но предметные правила не прошли (контрольная сумма ISBN)
+500 vs 502 vs 503?	500 — упал сам сервис. 502 — посредник получил плохой/никакой ответ от нижестоящего. 503 — временно недоступен (+ Retry-After)
+Кто ставит 502?	Посредник (шлюз, балансировщик) — сам сервис себе 502 не отдаёт
+Поля RFC 7807 (Problem Details)?	type (URI типа), title, status, detail, instance (URI запроса); Content-Type: application/problem+json
+Зачем в RFC 7807 status дублируется в теле?	Статус могут переписать посредники (шлюз/балансировщик) — тело доезжает как есть; клиент решает по телу
+Семантика RFC 7386 (Merge Patch)?	null = очистить поле; поле отсутствует = не менять. Договор на уровне протокола
+Семантика RFC 6902 (JSON Patch)?	Тело — массив операций [{op: add/remove/replace, path, value}]; Content-Type: application/json-patch+json. Шлём не данные, а команды правок
+Три состояния значения поля в JSON?	1) есть значение 2) null 3) поле отсутствует. В Java-объекте состояний только два (значение/null) — отсюда вся боль PATCH
+Семантика PUT?	Полное замещение состояния: не прислал поле — оно обнуляется. Поэтому идемпотентен
+Договорённость нашего PatchProductRequest?	null = «не трогать». Следствие: обнулить поле через PATCH нельзя (осознанный компромисс)
+Три способа «стереть поле» через PATCH?	1) RFC 7386 Merge (null=очистить) 2) RFC 6902 (op:remove) 3) своё reset:[] или JsonNullable
+Что такое JsonNullable?	Обёртка с тремя состояниями ABSENT/NULL/VALUE (org.openapitools.jackson.nullable); absent сериализуется «поля нет». Механизм реализации 7386 в Java
+Цепочка Bean Validation?	Аннотации на DTO (@NotBlank...) → @Valid на параметре → проверка до входа в контроллер → MethodArgumentNotValidException → @ControllerAdvice → 400 + fieldErrors
+Поля FieldError у нас?	field, rejectedValue, message. Чего не хватает: машиночитаемого code (REQUIRED/ISBN_INVALID) — готовый ответ «как улучшил бы»
+Кто сломается при переименовании поля isbn→productIdentifier?	Сервер — нет, клиент — да и молча: маппит fieldErrors[].field на инпут формы строковым совпадением
+Роль @ControllerAdvice в одном предложении?	Единая точка превращения исключений в HTTP-ответы: 404/400/500 одним форматом (у нас GlobalExceptionHandler, BASE .../problems/)
+HATEOAS одним предложением?	Представление ресурса содержит ссылки на возможные действия; клиент ходит по href, зная наизусть только один URL
+Что такое rel?	Имя отношения ссылки (self, items, update, delete) — часть публичного контракта: клиент различает действия по rel, идёт по href
+Как работает linkTo(methodOn(ProductController.class).get(id))?	Метод НЕ вызывается: Spring HATEOAS строит прокси, читает аннотации маппинга (@GetMapping) и собирает URL. Переименование маппинга обновляет ссылки автоматически
+4 пункта цены HATEOAS?	1) ссылки и rel — публичный контракт 2) матрица состояние×действие (тестировать) 3) ссылки абсолютны — X-Forwarded-Host/Proto 4) забыл ссылку = действия не существует
+Конфликт HATEOAS с UI?	UI хочет показывать задизейбленную кнопку с причиной, а «нет ссылки» = действие не существует. Решения: allowed/reason в теле, реестр rel, BFF (canX-флаги)
+Зачем контракт в отдельном Maven-модуле?	Один источник правды (DTO+эндпоинты+ошибки); javac ловит ломающие изменения у потребителей; OpenAPI из тех же аннотаций. Цена: тащит Spring-зависимости
+Три операции GraphQL и порядок исполнения?	Query — параллельно; Mutation — верхнеуровневые поля строго последовательно (порядок в тексте); Subscription — пуш по WS/SSE
+Почему mutation исполняется последовательно?	Целостность: нельзя обновить то, что create ещё не создал; порядок задан порядком полей в тексте запроса
+3 причины variables (не хардкодить значения)?	1) текст запроса — константа → кэш parse/validate (аналог prepared statement) 2) persisted queries/APQ — шлём только хэш 3) типобезопасность: не тот тип отбракован до исполнения (+ нет инъекций)
+Что такое APQ?	Automatic Persisted Queries: первый запрос — текст+hash, дальше — только hash+variables: экономия трафика и фазы парсинга
+Depth vs Complexity?	Depth — вертикаль запроса (слеп к ширине и алиасам). Complexity — сумма весов полей, пагинация умножает цену ветки; ловит то, что depth пропустил
+4 способа уложить сервер при depth=5?	1) first:100000 (ширина) 2) алиасы a:b:c:... ×200 3) одно поле с дорогим резолвером 4) introspection для разведки схемы
+Формула N+1 в нашем проекте?	7 = 1 (список продуктов) + 1 (категории) + 4 (items для каждого); на 50 продуктах — 51 вызов (ProductItemsDataFetcher)
+Как работает DataLoader?	Копит ключи всех запросивших полей за «тик» → один батч WHERE product_id IN (...) → карта id→значение + кэш на время запроса. 1+N → 1+1
+Формат ошибок GraphQL?	Всегда HTTP 200, ошибки в errors[] (message, path, extensions). В DGS — TypedGraphQLError/GraphQLExceptionHandler; не путать с @ControllerAdvice
+input vs type в схеме?	Аргументы мутаций — только input (PatchBookInput); типы-модели в аргументах использовать нельзя. В input absent ≠ null — обнуление штатно
+Что значит [Book!]!?	Список не null И элементы не null; ! читается «изнутри наружу»
+Лимиты GraphQL в проекте?	MaxQueryDepth(20), MaxQueryComplexity(200), вес поля по умолчанию 1 (дорогим полям вес повышаем вручную)
+Ключевые аннотации DGS?	@DgsComponent, @DgsQuery, @DgsMutation, @DgsSubscription, @DgsData(parentType, field), @InputArgument
+Почему HTTP-кэш не работает для GraphQL?	Всё уходит POST на один URL /graphql — кэшировать нечего. Лечение: APQ + CDN; кэш per-field на клиенте (Apollo)
+Формат провода protobuf?	Пары (номер поля, wire type); имён полей в байтах нет. Поэтому переименование безопасно, ломают номера и wire type
+Wire types protobuf?	0 varint (int32/int64/bool/enum), 1 fixed 64-bit, 2 length-delimited (string/bytes/message/packed repeated), 5 fixed 32-bit
+Старый клиент читает сообщение с новым полем?	Не знает номер → смотрит wire type → пропускает блок целиком, остальное парсит как раньше. Совместимо
+Новый клиент читает старые данные?	Поля в байтах нет → дефолт proto3: 0 / '' / false / enum[0]. Различить «не задано» → optional + hasField()
+Почему переименование поля в .proto безопасно?	Имена по сети не ездят, только номера. В JSON — наоборот: имена и есть контракт (отсюда хрупкость FieldError.field)
+Что ломает совместимость proto (3 вещи)?	1) смена типа с другим wire type = падение парсера 2) смена в пределах того же wire (int32→int64→bool) = тихий мусор 3) переиспользование номера без reserved
+Зачем reserved в proto?	Запрещает переиспользовать удалённые номер и имя — компилятор не даст; плюс buf breaking в CI. Протокол защищает структуру, не смысл
+4 типа вызовов gRPC?	unary; server streaming (returns stream X); client streaming (принимает stream); bidi — stream с обеих сторон
+Транспорт и ошибки gRPC?	HTTP/2 + бинарный protobuf; мультиплексирование; коды ошибок: NOT_FOUND, INVALID_ARGUMENT, INTERNAL (вместо HTTP-статусов)
+Поток сообщения AMQP?	producer → exchange → binding → queue → consumer. Producer не знает очередей — только exchange и routing key
+Типы exchange?	direct (точный ключ), fanout (копии всем привязанным очередям), topic (паттерны), headers
+Topic-паттерны: какие бинды поймают product.created?	product.* ✓, product.# ✓, *.created ✓, # ✓; *.updated ✗; item.created ✗. * = ровно одно слово, # = ноль и больше
+Поля EventEnvelope?	metadata {eventId, occurredAt, source, routingKey} + payload. eventId (UUID) — ключ дедупликации
+Синтаксис sealed-иерархии событий?	sealed interface ProductEvent permits ProductEvent.Created, ...; наследники — record со своим payload: record Created(Long id, String name) implements ProductEvent {}
+Что даёт exhaustive switch?	Компилятор знает закрытый список permits и требует покрыть все ветки без default: забыл — ошибка компиляции (эволюция проверяется на сборке)
+Старый consumer встречает новый вариант события?	Без default — MatchException (громко, видно в мониторинге); с default — тишина (хуже). Правило: default → warn + метрика + DLQ
+enum vs sealed — мнемоника?	enum — закрытый список ЗНАЧЕНИЙ при одном наборе полей; sealed — закрытый список ТИПОВ, у каждого свой payload. Одинаковые данные → enum; разные → sealed
+Правило деплоя consumer/producer?	Consumer'ов деплоить раньше producer'ов: старый consumer + новое событие = беда; новый consumer + старое событие = ок (обратная совместимость)
+Три звена гарантированной доставки?	1) publisher confirms (брокер квитанцией подтвердил приём) 2) durable exchange/queue + persistent message (delivery mode 2, на диск) 3) manual ack (подтверждение после обработки)
+Риск auto-ack?	Брокер вычеркнул сообщение при отправке; consumer упал на полпути → «доставлено», работы нет → тихая потеря
+Что делает basicNack(requeue=false)?	Уводит сообщение в DLQ: очередь не блокируется, разбор руками; рост DLQ = алерт. Тихий сбой → громкий
+Почему exactly-once невозможен сквозь сеть?	Подтверждение может потеряться ПОСЛЕ применения операции → повтор неизбежен. Стандарт: at-least-once + идемпотентность (дедуп по eventId)
+Dual write: потеря vs фантом?	Потеря (данных нет, события нет) — тихая, для аудита опаснее. Фантом (событие есть, данных нет) — громкий. Для «денег наружу» наоборот: фантом хуже
+Шаги outbox-паттерна?	В одной ACID-транзакции: бизнес-данные + INSERT в outbox → отдельный релизер читает и публикует с confirms → помечает PUBLISHED. Плата: at-least-once → дедуп
+Почему afterCommit-публикация хуже outbox?	Смерть процесса между commit и publish = потеря навсегда; outbox лежит в БД и переживает любое падение
+Что стоит в аудите у нас и чего нет?	Exchange smartfridge.events (topic, durable), binding '#' (всё), авто-ack. НЕТ: confirms, manual ack, DLQ, дедупа — карта улучшений
+4 модуля проекта?	smart-fridge-api-contract (REST-контракт) · smart-fridge-service (8080, REST+GraphQL DGS) · smart-fridge-events-contract (события) · smart-fridge-audit-service (8081)
+Коды GlobalExceptionHandler?	404 resource-not-found · 400 validation-error + fieldErrors · 500 internal-error; BASE = https://api.example.com/problems/
+События проекта (payload)?	ProductEvent permits Created(id,name,category), Updated(id,name,category), Deleted(id,name); FridgeItemEvent аналогично + quantity/unit/expiresAt; Deleted — минимальный payload
+Как разорван цикл ProductService↔FridgeItemService?	@Lazy на одной из инъекций: прокси вместо реального бина до первого использования
+Живой dual write сбой в проекте?	ProductEventPublisher.send() в try/catch → log.error; демонстрация: docker stop rabbitmq → POST → 201, продукт создан, события нет, в логе строчка
+Хранилище и стек проекта?	In-memory ConcurrentHashMap (честный компромисс); Spring Boot 4, Java 21 (sealed/exhaustive switch), DGS 11, порты 8080/8081
