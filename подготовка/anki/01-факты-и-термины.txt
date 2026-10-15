@@ -21,7 +21,7 @@
 [PATCH] Что такое JsonNullable?	Обёртка с тремя состояниями ABSENT/NULL/VALUE (org.openapitools.jackson.nullable); absent сериализуется «поля нет». Механизм реализации 7386 в Java
 Цепочка Bean Validation?	Аннотации на DTO (@NotBlank...) → @Valid на параметре → проверка до входа в контроллер → MethodArgumentNotValidException → @ControllerAdvice → 400 + fieldErrors
 [Проект] Поля FieldError у нас?	field, rejectedValue, message. Чего не хватает: машиночитаемого code (REQUIRED/ISBN_INVALID) — готовый ответ «как улучшил бы»
-[Валидация] Кто сломается при переименовании поля isbn→productIdentifier?	Сервер — нет, клиент — да и молча: маппит fieldErrors[].field на инпут формы строковым совпадением
+[Валидация] [Валидация · REST] В REST-контракте переименовали поле isbn→productIdentifier (DTO + @NotBlank). Кто сломается?	Сервер — нет, клиент — да и молча: Bean Validation отдаёт ошибки по новому имени, а фронт маппит fieldErrors[].field на инпут формы строковым совпадением
 Роль @ControllerAdvice в одном предложении?	Единая точка превращения исключений в HTTP-ответы: 404/400/500 одним форматом (у нас GlobalExceptionHandler, BASE .../problems/)
 HATEOAS одним предложением?	Представление ресурса содержит ссылки на возможные действия; клиент ходит по href, зная наизусть только один URL
 [HATEOAS] Что такое rel?	Имя отношения ссылки (self, items, update, delete) — часть публичного контракта: клиент различает действия по rel, идёт по href
